@@ -1,0 +1,10 @@
+apps/api/
+backend/
+docs/
+packages/
+**/__pycache__/
+**/*.pyc
+**/.venv/
+.env
+.env.*
+!.env.example
