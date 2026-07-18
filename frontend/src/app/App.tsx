@@ -1,108 +1,147 @@
-import { Coins, Home, Search, Shirt, ShoppingBag, Sparkles, UserRound } from 'lucide-react';
+import {
+  Bell, BookOpen, Box, Coins, Crown, Gift, Home, MessageCircle, Search,
+  Settings, Shirt, ShoppingBag, Sparkles, Star, Sword, Trophy, UserRound,
+  Users, WandSparkles, Wind,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 type Gender = 'male' | 'female';
-type Category = 'Все' | 'Верх' | 'Низ' | 'Обувь' | 'Аксессуары';
+type Category = 'Рекомендуем' | 'Одежда' | 'Причёски' | 'Оружие' | 'Аксессуары' | 'Крылья' | 'Питомцы' | 'Эмоции';
 
 type Product = {
   id: number;
   name: string;
-  category: Exclude<Category, 'Все'>;
   price: number;
+  category: Category;
   gender: Gender | 'unisex';
+  symbol: string;
   accent: string;
 };
 
 const products: Product[] = [
-  { id: 1, name: 'Куртка «Северный ветер»', category: 'Верх', price: 840, gender: 'male', accent: 'linear-gradient(145deg,#1d4058,#0d1f2d)' },
-  { id: 2, name: 'Пальто «Тихий город»', category: 'Верх', price: 1120, gender: 'unisex', accent: 'linear-gradient(145deg,#304b5e,#152635)' },
-  { id: 3, name: 'Юбка «Небесная линия»', category: 'Низ', price: 620, gender: 'female', accent: 'linear-gradient(145deg,#426b80,#172c3b)' },
-  { id: 4, name: 'Брюки «Ночной маршрут»', category: 'Низ', price: 720, gender: 'unisex', accent: 'linear-gradient(145deg,#263d4d,#0b1823)' },
-  { id: 5, name: 'Ботинки «Пульс»', category: 'Обувь', price: 680, gender: 'unisex', accent: 'linear-gradient(145deg,#245776,#102637)' },
-  { id: 6, name: 'Наушники «Эхо»', category: 'Аксессуары', price: 430, gender: 'unisex', accent: 'linear-gradient(145deg,#31718c,#102938)' },
+  { id: 1, name: 'Ночной охотник', price: 1280, category: 'Одежда', gender: 'male', symbol: '✦', accent: 'blue' },
+  { id: 2, name: 'Ледяной странник', price: 1100, category: 'Одежда', gender: 'unisex', symbol: '❄', accent: 'ice' },
+  { id: 3, name: 'Лунный клинок', price: 1450, category: 'Оружие', gender: 'unisex', symbol: '⚔', accent: 'steel' },
+  { id: 4, name: 'Крылья рассвета', price: 1300, category: 'Крылья', gender: 'unisex', symbol: '翼', accent: 'sky' },
+  { id: 5, name: 'Теневой котёнок', price: 800, category: 'Питомцы', gender: 'unisex', symbol: '🐈', accent: 'pet' },
+  { id: 6, name: 'Городская куртка', price: 890, category: 'Одежда', gender: 'female', symbol: '✧', accent: 'cyan' },
+];
+
+const sideItems = [
+  [Home, 'Главная'], [UserRound, 'Персонаж'], [Box, 'Инвентарь'], [ShoppingBag, 'Магазин'],
+  [BookOpen, 'Квесты'], [Trophy, 'Достижения'], [Crown, 'Гильдия'], [Users, 'Друзья'], [Settings, 'Настройки'],
+] as const;
+
+const categories: Array<[Category, typeof Star]> = [
+  ['Рекомендуем', Star], ['Одежда', Shirt], ['Причёски', WandSparkles], ['Оружие', Sword],
+  ['Аксессуары', Crown], ['Крылья', Wind], ['Питомцы', Sparkles], ['Эмоции', MessageCircle],
 ];
 
 export function App() {
   const [gender, setGender] = useState<Gender>('male');
-  const [category, setCategory] = useState<Category>('Все');
+  const [category, setCategory] = useState<Category>('Рекомендуем');
   const [crowns, setCrowns] = useState(2450);
-  const [selected, setSelected] = useState<Product | null>(products[0]);
+  const [selected, setSelected] = useState<Product>(products[0]);
 
-  const visibleProducts = useMemo(
-    () => products.filter((item) => (item.gender === gender || item.gender === 'unisex') && (category === 'Все' || item.category === category)),
-    [gender, category],
-  );
+  const visibleProducts = useMemo(() => products.filter((item) => {
+    const genderMatch = item.gender === gender || item.gender === 'unisex';
+    const categoryMatch = category === 'Рекомендуем' || item.category === category;
+    return genderMatch && categoryMatch;
+  }), [gender, category]);
 
   const buy = () => {
-    if (!selected || crowns < selected.price) return;
+    if (crowns < selected.price) return;
     setCrowns((value) => value - selected.price);
   };
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">ANIME WARDROBE</p>
-          <h1>Собери своего героя</h1>
+    <main className="game-shell">
+      <header className="profile-header">
+        <div className="burger">☰</div>
+        <div className="profile-avatar"><span>42</span></div>
+        <div className="profile-copy">
+          <strong>PlayerOne</strong>
+          <div className="stat"><span>HP</span><i><b style={{ width: '88%' }} /></i><em>1250 / 1250</em></div>
+          <div className="stat"><span>MP</span><i><b style={{ width: '72%' }} /></i><em>620 / 620</em></div>
+          <div className="stat"><span>EXP</span><i><b style={{ width: '65%' }} /></i><em>65%</em></div>
         </div>
-        <div className="wallet"><Coins size={18} /><strong>{crowns.toLocaleString('ru-RU')}</strong><span>крон</span></div>
+        <div className="header-actions">
+          <div className="currency"><Coins size={18} /><strong>135 420</strong><button>+</button></div>
+          <div className="currency primary"><Crown size={18} /><strong>{crowns.toLocaleString('ru-RU')}</strong><button>+</button></div>
+          <button className="icon-button"><Bell size={21} /></button>
+          <button className="icon-button"><Settings size={21} /></button>
+        </div>
       </header>
 
-      <section className="hero-card">
-        <div className="hero-copy">
-          <span className="status"><Sparkles size={15} /> новая коллекция</span>
-          <h2>Город после заката</h2>
-          <p>Современная anime-fashion эстетика: спокойные цвета, techwear и лёгкие фэнтези-детали.</p>
-        </div>
-        <div className={`avatar-preview ${gender}`}>
-          <div className="avatar-head" />
-          <div className="avatar-body" />
-          <div className="avatar-coat" />
-        </div>
-      </section>
-
-      <section className="shop-section">
-        <div className="section-heading">
-          <div><p className="eyebrow">МАГАЗИН</p><h2>Выбери персонажа</h2></div>
-          <ShoppingBag size={24} />
-        </div>
-
-        <div className="gender-switch" aria-label="Выбор персонажа">
-          <button className={gender === 'male' ? 'active' : ''} onClick={() => setGender('male')}><UserRound size={18} />Парень</button>
-          <button className={gender === 'female' ? 'active' : ''} onClick={() => setGender('female')}><UserRound size={18} />Девушка</button>
-        </div>
-
-        <div className="categories">
-          {(['Все', 'Верх', 'Низ', 'Обувь', 'Аксессуары'] as Category[]).map((item) => (
-            <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>
-          ))}
-        </div>
-
-        <div className="product-grid">
-          {visibleProducts.map((item) => (
-            <button key={item.id} className={`product-card ${selected?.id === item.id ? 'selected' : ''}`} onClick={() => setSelected(item)}>
-              <div className="product-art" style={{ background: item.accent }}><Shirt size={42} /></div>
-              <span>{item.category}</span>
-              <h3>{item.name}</h3>
-              <strong><Coins size={15} /> {item.price} крон</strong>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {selected && (
-        <aside className="purchase-bar">
-          <div><span>Выбрано</span><strong>{selected.name}</strong></div>
-          <button onClick={buy} disabled={crowns < selected.price}>{crowns < selected.price ? 'Не хватает крон' : `Купить · ${selected.price}`}</button>
+      <div className="dashboard-grid">
+        <aside className="side-menu panel">
+          {sideItems.map(([Icon, label]) => <button key={label} className={label === 'Магазин' ? 'active' : ''}><Icon size={21} /><span>{label}</span></button>)}
         </aside>
-      )}
 
-      <nav className="bottom-nav">
-        <button><Home /><span>Главная</span></button>
-        <button className="active"><ShoppingBag /><span>Магазин</span></button>
-        <button><Search /><span>Каталог</span></button>
-        <button><UserRound /><span>Профиль</span></button>
-      </nav>
+        <section className="event-banner panel">
+          <div><span>ВРЕМЕННОЕ СОБЫТИЕ</span><h3>ЗАТМЕНИЕ НАД ГОРОДОМ</h3><p>Собери новый образ и получи редкий аксессуар.</p></div>
+          <div className="event-monster">✦</div>
+        </section>
+
+        <section className="shop panel">
+          <div className="shop-title"><div><span>МАГАЗИН</span><p>Выбери своего героя</p></div><ShoppingBag /></div>
+          <div className="gender-tabs">
+            <button className={gender === 'male' ? 'active' : ''} onClick={() => setGender('male')}>♂ ПАРЕНЬ</button>
+            <button className={gender === 'female' ? 'active' : ''} onClick={() => setGender('female')}>♀ ДЕВУШКА</button>
+          </div>
+          <div className="character-stage">
+            <button className={`character-card male ${gender === 'male' ? 'chosen' : ''}`} onClick={() => setGender('male')}>
+              <div className="anime-character"><div className="hair"/><div className="face"/><div className="coat"/><div className="blade"/></div>
+              <span>КАЭЛ</span><small>Стиль: техно-мечник</small>
+            </button>
+            <button className={`character-card female ${gender === 'female' ? 'chosen' : ''}`} onClick={() => setGender('female')}>
+              <div className="anime-character"><div className="hair"/><div className="face"/><div className="coat"/></div>
+              <span>МИРА</span><small>Стиль: ночной следопыт</small>
+            </button>
+          </div>
+        </section>
+
+        <aside className="categories-panel panel">
+          <h3>КАТЕГОРИИ <Crown size={20}/></h3>
+          {categories.map(([name, Icon]) => <button key={name} className={category === name ? 'active' : ''} onClick={() => setCategory(name)}><Icon size={19}/>{name}</button>)}
+        </aside>
+
+        <section className="daily panel">
+          <span>ЕЖЕДНЕВНЫЙ БОНУС</span>
+          <div className="bonus-hero">✦</div>
+          <p>Входите каждый день и получайте кроны.</p>
+          <button><Gift size={16}/> ПОЛУЧИТЬ</button>
+        </section>
+
+        <section className="recommended panel">
+          <div className="strip-title"><h3>РЕКОМЕНДУЕМ</h3><span>{visibleProducts.length} предметов</span></div>
+          <div className="products-row">
+            {visibleProducts.map((item) => (
+              <button key={item.id} className={`item-card ${item.accent} ${selected.id === item.id ? 'selected' : ''}`} onClick={() => setSelected(item)}>
+                <div className="item-art">{item.symbol}</div><span>{item.name}</span><strong><Crown size={14}/>{item.price}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="chat panel">
+          <h3><MessageCircle size={18}/> МИРОВОЙ ЧАТ</h3>
+          <p><b>ShadowX:</b> Кто пойдёт на рейд?</p><p><b>Luna:</b> Ищу пати на данж 25+</p><p><b>VoidKing:</b> Продам редкий плащ</p>
+          <div className="chat-input">Напишите сообщение… <span>➤</span></div>
+        </section>
+
+        <section className="starter panel">
+          <h3>НАБОР НОВИЧКА</h3><div className="starter-chest">♛</div><p>1000 крон<br/>Уникальный костюм<br/>Опыт +50%</p><button>199 ₽</button>
+        </section>
+
+        <section className="topup panel">
+          <h3>ПОПОЛНЕНИЕ</h3><div className="topup-grid">{[300,980,1980,3280,6480,12960].map((amount) => <button key={amount}><Crown/><b>{amount}</b><span>{Math.round(amount / 4)} ₽</span></button>)}</div>
+        </section>
+      </div>
+
+      <aside className="purchase-dock"><div><small>Выбрано</small><strong>{selected.name}</strong></div><button onClick={buy} disabled={crowns < selected.price}>{crowns < selected.price ? 'Не хватает крон' : `Купить · ${selected.price}`}</button></aside>
+
+      <nav className="bottom-nav"><button><Home/><span>Главная</span></button><button><UserRound/><span>Персонаж</span></button><button><Search/><span>Исследование</span></button><button><MessageCircle/><span>Чат</span></button><button className="active"><ShoppingBag/><span>Магазин</span></button><button><Box/><span>Меню</span></button></nav>
     </main>
   );
 }
