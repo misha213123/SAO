@@ -1,0 +1,13 @@
+{
+  "name": "anime-verse-shop",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace @anime-verse/web",
+    "build": "npm run build --workspace @anime-verse/web",
+    "preview": "npm run preview --workspace @anime-verse/web",
+    "typecheck": "npm run typecheck --workspace @anime-verse/web"
+  },
+  "engines": {"node": ">=20"}
+}
