@@ -4,6 +4,7 @@ import {
   Users, WandSparkles, Wind,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { AnimeHero } from '../components/characters/AnimeHero';
 
 type Gender = 'male' | 'female';
 type Category = 'Рекомендуем' | 'Одежда' | 'Причёски' | 'Оружие' | 'Аксессуары' | 'Крылья' | 'Питомцы' | 'Эмоции';
@@ -91,12 +92,12 @@ export function App() {
           </div>
           <div className="character-stage">
             <button className={`character-card male ${gender === 'male' ? 'chosen' : ''}`} onClick={() => setGender('male')}>
-              <div className="anime-character"><div className="hair"/><div className="face"/><div className="coat"/><div className="blade"/></div>
-              <span>КАЭЛ</span><small>Стиль: техно-мечник</small>
+              <AnimeHero variant="male" />
+              <div className="character-label"><span>КАЭЛ</span><small>Техно-мечник · UR</small></div>
             </button>
             <button className={`character-card female ${gender === 'female' ? 'chosen' : ''}`} onClick={() => setGender('female')}>
-              <div className="anime-character"><div className="hair"/><div className="face"/><div className="coat"/></div>
-              <span>МИРА</span><small>Стиль: ночной следопыт</small>
+              <AnimeHero variant="female" />
+              <div className="character-label"><span>МИРА</span><small>Ночной следопыт · UR</small></div>
             </button>
           </div>
         </section>
