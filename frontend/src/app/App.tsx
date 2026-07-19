@@ -1,148 +1,211 @@
 import {
-  Bell, BookOpen, Box, Coins, Crown, Gift, Home, MessageCircle, Search,
-  Settings, Shirt, ShoppingBag, Sparkles, Star, Sword, Trophy, UserRound,
-  Users, WandSparkles, Wind,
+  Backpack, Bell, Castle, ChevronRight, Coins, Crown, Flame, Footprints,
+  HeartPulse, Home, LockKeyhole, Map, Menu, MessageCircle, Settings, Shield,
+  ShoppingBag, Sparkles, Sword, Trophy, UserRound, Zap,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { AnimeHero } from '../components/characters/AnimeHero';
 
-type Gender = 'male' | 'female';
-type Category = 'Рекомендуем' | 'Одежда' | 'Причёски' | 'Оружие' | 'Аксессуары' | 'Крылья' | 'Питомцы' | 'Эмоции';
+type View = 'home' | 'explore' | 'shop' | 'profile';
 
-type Product = {
+type Floor = {
   id: number;
   name: string;
-  price: number;
-  category: Category;
-  gender: Gender | 'unisex';
-  symbol: string;
-  accent: string;
+  subtitle: string;
+  boss: string;
+  unlocked: boolean;
+  tone: string;
 };
 
-const products: Product[] = [
-  { id: 1, name: 'Ночной охотник', price: 1280, category: 'Одежда', gender: 'male', symbol: '✦', accent: 'blue' },
-  { id: 2, name: 'Ледяной странник', price: 1100, category: 'Одежда', gender: 'unisex', symbol: '❄', accent: 'ice' },
-  { id: 3, name: 'Лунный клинок', price: 1450, category: 'Оружие', gender: 'unisex', symbol: '⚔', accent: 'steel' },
-  { id: 4, name: 'Крылья рассвета', price: 1300, category: 'Крылья', gender: 'unisex', symbol: '翼', accent: 'sky' },
-  { id: 5, name: 'Теневой котёнок', price: 800, category: 'Питомцы', gender: 'unisex', symbol: '🐈', accent: 'pet' },
-  { id: 6, name: 'Городская куртка', price: 890, category: 'Одежда', gender: 'female', symbol: '✧', accent: 'cyan' },
+const floors: Floor[] = [
+  { id: 1, name: 'Луга Начала', subtitle: 'Дикие кабаны · Ур. 1–3', boss: 'Вожак клыков', unlocked: true, tone: 'meadow' },
+  { id: 2, name: 'Туманный лес', subtitle: 'Лесные волки · Ур. 4–7', boss: 'Серый хищник', unlocked: false, tone: 'forest' },
+  { id: 3, name: 'Каменный каньон', subtitle: 'Пещерные големы · Ур. 8–12', boss: 'Каменный страж', unlocked: false, tone: 'canyon' },
+  { id: 4, name: 'Озёрный край', subtitle: 'Водные духи · Ур. 13–17', boss: 'Хозяйка глубин', unlocked: false, tone: 'lake' },
+  { id: 5, name: 'Город фонарей', subtitle: 'Теневые разбойники · Ур. 18–22', boss: 'Алый дуэлянт', unlocked: false, tone: 'city' },
 ];
 
-const sideItems = [
-  [Home, 'Главная'], [UserRound, 'Персонаж'], [Box, 'Инвентарь'], [ShoppingBag, 'Магазин'],
-  [BookOpen, 'Квесты'], [Trophy, 'Достижения'], [Crown, 'Гильдия'], [Users, 'Друзья'], [Settings, 'Настройки'],
-] as const;
-
-const categories: Array<[Category, typeof Star]> = [
-  ['Рекомендуем', Star], ['Одежда', Shirt], ['Причёски', WandSparkles], ['Оружие', Sword],
-  ['Аксессуары', Crown], ['Крылья', Wind], ['Питомцы', Sparkles], ['Эмоции', MessageCircle],
+const shopItems = [
+  { icon: '🗡️', name: 'Клинок новичка', price: 80 },
+  { icon: '🧥', name: 'Куртка разведчика', price: 120 },
+  { icon: '🥾', name: 'Сапоги тропы', price: 95 },
+  { icon: '🧪', name: 'Малое зелье', price: 35 },
 ];
 
 export function App() {
-  const [gender, setGender] = useState<Gender>('male');
-  const [category, setCategory] = useState<Category>('Рекомендуем');
-  const [crowns, setCrowns] = useState(2450);
-  const [selected, setSelected] = useState<Product>(products[0]);
+  const [view, setView] = useState<View>('home');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [enemyHp, setEnemyHp] = useState(30);
+  const [playerHp, setPlayerHp] = useState(100);
+  const [stamina, setStamina] = useState(100);
+  const [col, setCol] = useState(0);
+  const [crowns] = useState(0);
+  const [battleLog, setBattleLog] = useState('Первый враг уже заметил вас. Приготовьтесь к бою.');
+  const [battleWon, setBattleWon] = useState(false);
 
-  const visibleProducts = useMemo(() => products.filter((item) => {
-    const genderMatch = item.gender === gender || item.gender === 'unisex';
-    const categoryMatch = category === 'Рекомендуем' || item.category === category;
-    return genderMatch && categoryMatch;
-  }), [gender, category]);
+  const hpPercent = useMemo(() => `${Math.max(0, playerHp)}%`, [playerHp]);
+  const enemyPercent = useMemo(() => `${Math.max(0, (enemyHp / 30) * 100)}%`, [enemyHp]);
 
-  const buy = () => {
-    if (crowns < selected.price) return;
-    setCrowns((value) => value - selected.price);
+  const attack = () => {
+    if (battleWon || playerHp <= 0) return;
+    const playerDamage = 10 + Math.floor(Math.random() * 6);
+    const nextEnemyHp = Math.max(0, enemyHp - playerDamage);
+    setEnemyHp(nextEnemyHp);
+
+    if (nextEnemyHp === 0) {
+      setBattleWon(true);
+      setCol(25);
+      setBattleLog(`Дикий кабан побеждён. Вы получили 25 Коллов и 20 опыта.`);
+      return;
+    }
+
+    const enemyDamage = 5 + Math.floor(Math.random() * 4);
+    setPlayerHp((value) => Math.max(0, value - enemyDamage));
+    setStamina((value) => Math.max(0, value - 4));
+    setBattleLog(`Вы нанесли ${playerDamage} урона. Кабан ответил и нанёс ${enemyDamage} урона.`);
+  };
+
+  const resetBattle = () => {
+    setEnemyHp(30);
+    setPlayerHp(100);
+    setStamina(100);
+    setCol(0);
+    setBattleWon(false);
+    setBattleLog('Первый враг уже заметил вас. Приготовьтесь к бою.');
   };
 
   return (
-    <main className="game-shell">
-      <header className="profile-header">
-        <div className="burger">☰</div>
-        <div className="profile-avatar"><span>42</span></div>
-        <div className="profile-copy">
+    <main className="mmo-shell">
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
+
+      <header className="game-hud">
+        <button className="hud-menu" onClick={() => setMenuOpen(true)} aria-label="Открыть меню"><Menu /></button>
+        <div className="hero-avatar"><div className="avatar-hair" /><span>1</span></div>
+        <div className="hero-stats">
           <strong>PlayerOne</strong>
-          <div className="stat"><span>HP</span><i><b style={{ width: '88%' }} /></i><em>1250 / 1250</em></div>
-          <div className="stat"><span>MP</span><i><b style={{ width: '72%' }} /></i><em>620 / 620</em></div>
-          <div className="stat"><span>EXP</span><i><b style={{ width: '65%' }} /></i><em>65%</em></div>
+          <div className="mini-stat"><span>HP</span><i><b style={{ width: hpPercent }} /></i><em>{playerHp}/100</em></div>
+          <div className="mini-stat stamina"><span>EN</span><i><b style={{ width: `${stamina}%` }} /></i><em>{stamina}/100</em></div>
+          <div className="mini-stat exp"><span>EXP</span><i><b style={{ width: '0%' }} /></i><em>0%</em></div>
         </div>
-        <div className="header-actions">
-          <div className="currency"><Coins size={18} /><strong>135 420</strong><button>+</button></div>
-          <div className="currency primary"><Crown size={18} /><strong>{crowns.toLocaleString('ru-RU')}</strong><button>+</button></div>
-          <button className="icon-button"><Bell size={21} /></button>
-          <button className="icon-button"><Settings size={21} /></button>
+        <div className="wallets">
+          <div className="wallet"><Coins size={17}/><strong>{col}</strong><small>Коллы</small></div>
+          <div className="wallet crowns"><Crown size={17}/><strong>{crowns}</strong><small>Кроны</small></div>
+          <button className="hud-icon"><Bell size={19}/></button>
+          <button className="hud-icon"><Settings size={19}/></button>
         </div>
       </header>
 
-      <div className="dashboard-grid">
-        <aside className="side-menu panel">
-          {sideItems.map(([Icon, label]) => <button key={label} className={label === 'Магазин' ? 'active' : ''}><Icon size={21} /><span>{label}</span></button>)}
-        </aside>
-
-        <section className="event-banner panel">
-          <div><span>ВРЕМЕННОЕ СОБЫТИЕ</span><h3>ЗАТМЕНИЕ НАД ГОРОДОМ</h3><p>Собери новый образ и получи редкий аксессуар.</p></div>
-          <div className="event-monster">✦</div>
-        </section>
-
-        <section className="shop panel">
-          <div className="shop-title"><div><span>МАГАЗИН</span><p>Выбери своего героя</p></div><ShoppingBag /></div>
-          <div className="gender-tabs">
-            <button className={gender === 'male' ? 'active' : ''} onClick={() => setGender('male')}>♂ ПАРЕНЬ</button>
-            <button className={gender === 'female' ? 'active' : ''} onClick={() => setGender('female')}>♀ ДЕВУШКА</button>
-          </div>
-          <div className="character-stage">
-            <button className={`character-card male ${gender === 'male' ? 'chosen' : ''}`} onClick={() => setGender('male')}>
-              <AnimeHero variant="male" />
-              <div className="character-label"><span>КАЭЛ</span><small>Техно-мечник · UR</small></div>
-            </button>
-            <button className={`character-card female ${gender === 'female' ? 'chosen' : ''}`} onClick={() => setGender('female')}>
-              <AnimeHero variant="female" />
-              <div className="character-label"><span>МИРА</span><small>Ночной следопыт · UR</small></div>
-            </button>
-          </div>
-        </section>
-
-        <aside className="categories-panel panel">
-          <h3>КАТЕГОРИИ <Crown size={20}/></h3>
-          {categories.map(([name, Icon]) => <button key={name} className={category === name ? 'active' : ''} onClick={() => setCategory(name)}><Icon size={19}/>{name}</button>)}
-        </aside>
-
-        <section className="daily panel">
-          <span>ЕЖЕДНЕВНЫЙ БОНУС</span>
-          <div className="bonus-hero">✦</div>
-          <p>Входите каждый день и получайте кроны.</p>
-          <button><Gift size={16}/> ПОЛУЧИТЬ</button>
-        </section>
-
-        <section className="recommended panel">
-          <div className="strip-title"><h3>РЕКОМЕНДУЕМ</h3><span>{visibleProducts.length} предметов</span></div>
-          <div className="products-row">
-            {visibleProducts.map((item) => (
-              <button key={item.id} className={`item-card ${item.accent} ${selected.id === item.id ? 'selected' : ''}`} onClick={() => setSelected(item)}>
-                <div className="item-art">{item.symbol}</div><span>{item.name}</span><strong><Crown size={14}/>{item.price}</strong>
-              </button>
+      {menuOpen && (
+        <div className="menu-backdrop" onClick={() => setMenuOpen(false)}>
+          <aside className="drawer" onClick={(event) => event.stopPropagation()}>
+            <div className="drawer-brand"><Sparkles/><div><strong>AETHER TOWER</strong><span>MMORPG MINI APP</span></div></div>
+            {[['Главная', Home, 'home'], ['Исследование', Map, 'explore'], ['Персонаж', UserRound, 'profile'], ['Инвентарь', Backpack, 'profile'], ['Магазин', ShoppingBag, 'shop'], ['Достижения', Trophy, 'profile']].map(([label, Icon, target]) => (
+              <button key={label as string} onClick={() => { setView(target as View); setMenuOpen(false); }}><Icon size={20}/>{label as string}</button>
             ))}
-          </div>
-        </section>
+          </aside>
+        </div>
+      )}
 
-        <section className="chat panel">
-          <h3><MessageCircle size={18}/> МИРОВОЙ ЧАТ</h3>
-          <p><b>ShadowX:</b> Кто пойдёт на рейд?</p><p><b>Luna:</b> Ищу пати на данж 25+</p><p><b>VoidKing:</b> Продам редкий плащ</p>
-          <div className="chat-input">Напишите сообщение… <span>➤</span></div>
-        </section>
+      <section className="screen-content">
+        {view === 'home' && (
+          <>
+            <section className="event-hero game-panel">
+              <div className="event-copy"><span>ВРЕМЕННОЕ СОБЫТИЕ</span><h1>ЗАТМЕНИЕ НАД БАШНЕЙ</h1><p>Первые врата открыты. Пройди обучение и получи стартовый клинок.</p><button onClick={() => setView('explore')}>Начать путь <ChevronRight size={18}/></button></div>
+              <div className="eclipse-art"><div className="moon"/><div className="tower"/><div className="rays"/></div>
+            </section>
 
-        <section className="starter panel">
-          <h3>НАБОР НОВИЧКА</h3><div className="starter-chest">♛</div><p>1000 крон<br/>Уникальный костюм<br/>Опыт +50%</p><button>199 ₽</button>
-        </section>
+            <div className="home-grid">
+              <section className="city-card game-panel">
+                <div className="panel-title"><div><span>ГЛАВНЫЙ ГОРОД</span><h2>Площадь Первого Света</h2></div><Castle/></div>
+                <div className="city-art"><div className="city-tower t1"/><div className="city-tower t2"/><div className="city-tower t3"/><div className="city-road"/></div>
+                <div className="city-actions">
+                  <button><Sword/>Кузница</button><button><ShoppingBag/>Магазин</button><button><Shield/>Гильдия</button><button><MessageCircle/>Чат</button>
+                </div>
+              </section>
 
-        <section className="topup panel">
-          <h3>ПОПОЛНЕНИЕ</h3><div className="topup-grid">{[300,980,1980,3280,6480,12960].map((amount) => <button key={amount}><Crown/><b>{amount}</b><span>{Math.round(amount / 4)} ₽</span></button>)}</div>
-        </section>
-      </div>
+              <section className="progress-card game-panel">
+                <div className="panel-title"><div><span>ПРОГРЕСС</span><h2>Начало пути</h2></div><Footprints/></div>
+                <div className="quest-step done"><i>1</i><div><strong>Создать героя</strong><span>Выполнено</span></div></div>
+                <div className="quest-step active"><i>2</i><div><strong>Выйти на 1 этаж</strong><span>Доступно сейчас</span></div></div>
+                <div className="quest-step"><i>3</i><div><strong>Победить кабана</strong><span>Награда: 25 Коллов</span></div></div>
+                <button className="primary-action" onClick={() => setView('explore')}>Перейти на этаж</button>
+              </section>
+            </div>
 
-      <aside className="purchase-dock"><div><small>Выбрано</small><strong>{selected.name}</strong></div><button onClick={buy} disabled={crowns < selected.price}>{crowns < selected.price ? 'Не хватает крон' : `Купить · ${selected.price}`}</button></aside>
+            <section className="floors-preview game-panel">
+              <div className="panel-title"><div><span>БАШНЯ</span><h2>Доступные этажи</h2></div><Map/></div>
+              <div className="floor-scroll">
+                {floors.map((floor) => <FloorCard key={floor.id} floor={floor} onOpen={() => floor.unlocked && setView('explore')} />)}
+              </div>
+            </section>
+          </>
+        )}
 
-      <nav className="bottom-nav"><button><Home/><span>Главная</span></button><button><UserRound/><span>Персонаж</span></button><button><Search/><span>Исследование</span></button><button><MessageCircle/><span>Чат</span></button><button className="active"><ShoppingBag/><span>Магазин</span></button><button><Box/><span>Меню</span></button></nav>
+        {view === 'explore' && (
+          <section className="battle-layout">
+            <section className="battle-stage game-panel">
+              <div className="battle-topline"><span>ЭТАЖ 1 · ЛУГА НАЧАЛА</span><small>Первая встреча</small></div>
+              <div className="battle-scene">
+                <div className="scene-sky"><span/><span/><span/></div>
+                <div className="scene-hills h1"/><div className="scene-hills h2"/>
+                <div className="player-fighter"><div className="fighter-head"/><div className="fighter-body"/><div className="fighter-sword"/></div>
+                <div className={`boar ${battleWon ? 'defeated' : ''}`}><div className="boar-body"/><div className="boar-head"/><div className="boar-leg l1"/><div className="boar-leg l2"/><div className="boar-tusk"/></div>
+              </div>
+              <div className="enemy-card">
+                <div><span>ОБЫЧНЫЙ ВРАГ</span><h2>Дикий кабан</h2></div><strong>Ур. 1</strong>
+                <div className="enemy-health"><i><b style={{ width: enemyPercent }}/></i><em>{enemyHp}/30 HP</em></div>
+              </div>
+            </section>
+
+            <aside className="combat-panel game-panel">
+              <div className="panel-title"><div><span>БОЙ</span><h2>{battleWon ? 'Победа' : 'Твой ход'}</h2></div><Sword/></div>
+              <div className="combat-log">{battleLog}</div>
+              <div className="combat-stats"><div><HeartPulse/><span>HP</span><strong>{playerHp}/100</strong></div><div><Zap/><span>Стамина</span><strong>{stamina}/100</strong></div></div>
+              {!battleWon ? (
+                <div className="combat-actions"><button className="attack" onClick={attack}><Sword/>Атаковать</button><button className="escape" onClick={() => setBattleLog('Вы отступили в город. Стамина не потрачена в демо-режиме.')}><Footprints/>Отступить</button></div>
+              ) : (
+                <div className="victory-box"><Sparkles/><strong>Награда получена</strong><span>25 Коллов · 20 опыта</span><button onClick={resetBattle}>Повторить бой</button></div>
+              )}
+            </aside>
+
+            <section className="floor-list game-panel">
+              <div className="panel-title"><div><span>КАРТА БАШНИ</span><h2>Этажи</h2></div><Map/></div>
+              <div className="floor-scroll compact">{floors.map((floor) => <FloorCard key={floor.id} floor={floor} onOpen={() => undefined} />)}</div>
+            </section>
+          </section>
+        )}
+
+        {view === 'shop' && (
+          <section className="shop-screen game-panel">
+            <div className="panel-title"><div><span>МАГАЗИН ГОРОДА</span><h2>Снаряжение новичка</h2></div><ShoppingBag/></div>
+            <p className="muted">Баланс начинается с нуля. Первые покупки станут доступны после победы на первом этаже.</p>
+            <div className="shop-grid">{shopItems.map((item) => <article key={item.name} className="shop-item"><div>{item.icon}</div><strong>{item.name}</strong><span>{item.price} Коллов</span><button disabled={col < item.price}>{col < item.price ? 'Не хватает' : 'Купить'}</button></article>)}</div>
+          </section>
+        )}
+
+        {view === 'profile' && (
+          <section className="profile-screen">
+            <section className="profile-hero-card game-panel"><div className="profile-anime"><div className="p-hair"/><div className="p-face"/><div className="p-coat"/><div className="p-sword"/></div><div><span>ПЕРСОНАЖ</span><h1>PlayerOne</h1><p>Уровень 1 · Новичок башни</p><div className="profile-badges"><b>Сила 12</b><b>Этаж 1</b><b>Без гильдии</b></div></div></section>
+            <section className="equipment game-panel"><div className="panel-title"><div><span>ЭКИПИРОВКА</span><h2>Пустые слоты</h2></div><Shield/></div><div className="equipment-grid">{['Оружие','Доспех','Перчатки','Шлем','Ботинки','Кольцо'].map((slot) => <div key={slot}><LockKeyhole/><span>{slot}</span></div>)}</div></section>
+          </section>
+        )}
+      </section>
+
+      <nav className="mobile-nav">
+        <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')}><Home/><span>Главная</span></button>
+        <button className={view === 'explore' ? 'active' : ''} onClick={() => setView('explore')}><Map/><span>Этажи</span></button>
+        <button className={view === 'profile' ? 'active' : ''} onClick={() => setView('profile')}><UserRound/><span>Герой</span></button>
+        <button className={view === 'shop' ? 'active' : ''} onClick={() => setView('shop')}><ShoppingBag/><span>Магазин</span></button>
+      </nav>
     </main>
+  );
+}
+
+function FloorCard({ floor, onOpen }: { floor: Floor; onOpen: () => void }) {
+  return (
+    <button className={`floor-card ${floor.tone} ${floor.unlocked ? '' : 'locked'}`} onClick={onOpen}>
+      <div className="floor-art"><span>{floor.id}</span>{!floor.unlocked && <LockKeyhole/>}</div>
+      <div className="floor-copy"><small>ЭТАЖ {floor.id}</small><strong>{floor.name}</strong><span>{floor.subtitle}</span><em>Босс: {floor.boss}</em></div>
+    </button>
   );
 }
