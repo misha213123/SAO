@@ -40,6 +40,15 @@ class PlayerResponse(BaseModel):
     equipment: list[EquipmentItemResponse]
 
 
+class FloorResponse(BaseModel):
+    number: int
+    name: str
+    description: str
+    recommended_power: int
+    enemy_names: tuple[str, ...]
+    boss_name: str
+
+
 class StartExpeditionRequest(BaseModel):
     player_id: str
     floor: int = Field(ge=1, le=100)
@@ -56,7 +65,10 @@ class ExpeditionEventResponse(BaseModel):
     title: str
     description: str
     options: list[str]
+    enemy_name: str | None = None
     enemy_power: int | None = None
+    enemy_hp: int | None = None
+    enemy_max_hp: int | None = None
     reward_col: int = 0
     reward_crowns: int = 0
     reward_experience: int = 0
