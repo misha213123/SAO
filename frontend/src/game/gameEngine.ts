@@ -1,4 +1,17 @@
 export type EnemyKind = 'normal' | 'elite' | 'boss';
+export type ItemSlot = 'weapon' | 'armor' | 'consumable';
+
+export type ShopItem = {
+  id: string;
+  name: string;
+  icon: string;
+  slot: ItemSlot;
+  price: number;
+  powerBonus?: number;
+  defenseBonus?: number;
+  description: string;
+  tone: string;
+};
 
 export type Enemy = {
   id: string;
@@ -45,6 +58,9 @@ export type PlayerState = {
   armorDurability: number;
   maxArmorDurability: number;
   potions: number;
+  inventory: string[];
+  equippedWeapon: string | null;
+  equippedArmor: string | null;
 };
 
 export type SavedGame = {
@@ -54,6 +70,16 @@ export type SavedGame = {
   battleWon: boolean;
   gameOver: boolean;
 };
+
+export const SHOP_ITEMS: ShopItem[] = [
+  { id: 'starter-blade', name: 'Клинок рассвета', icon: '🗡️', slot: 'weapon', price: 180, powerBonus: 5, description: 'Лёгкий клинок для быстрых серий ударов.', tone: 'cyan' },
+  { id: 'mist-saber', name: 'Сабля тумана', icon: '⚔️', slot: 'weapon', price: 520, powerBonus: 12, description: 'Усиливает урон свайп-комбо.', tone: 'violet' },
+  { id: 'scarlet-edge', name: 'Алый клинок', icon: '🔪', slot: 'weapon', price: 1250, powerBonus: 24, description: 'Тяжёлое оружие охотника на боссов.', tone: 'red' },
+  { id: 'scout-coat', name: 'Плащ разведчика', icon: '🧥', slot: 'armor', price: 240, defenseBonus: 4, description: 'Базовая защита для первых этажей.', tone: 'blue' },
+  { id: 'forest-guard', name: 'Доспех лесного стража', icon: '🛡️', slot: 'armor', price: 690, defenseBonus: 10, description: 'Крепкая броня с зелёными вставками.', tone: 'green' },
+  { id: 'void-armor', name: 'Доспех бездны', icon: '🥋', slot: 'armor', price: 1600, defenseBonus: 20, description: 'Редкий комплект для высоких этажей.', tone: 'black' },
+  { id: 'small-potion', name: 'Малое зелье', icon: '🧪', slot: 'consumable', price: 35, description: 'Восстанавливает 45 HP в бою.', tone: 'pink' },
+];
 
 export const FLOORS: FloorDefinition[] = [
   {
@@ -110,7 +136,7 @@ export const INITIAL_PLAYER: PlayerState = {
   highestFloor: 1, selectedFloor: 1, floorWins: { 1: 0 }, defeatedBosses: [],
   weaponDurability: 40, maxWeaponDurability: 40,
   armorDurability: 55, maxArmorDurability: 55,
-  potions: 1,
+  potions: 1, inventory: [], equippedWeapon: null, equippedArmor: null,
 };
 
 export function xpRequired(level: number): number {
@@ -122,6 +148,18 @@ export function createEnemy(floorId: number, wins: number): Enemy {
   const useBoss = wins >= floor.encountersToBoss;
   const template = useBoss ? floor.boss : floor.enemies[wins % floor.enemies.length];
   return { ...template, id: `${floorId}-${wins}-${Date.now()}`, hp: template.maxHp };
+}
+
+export function getItem(id: string | null): ShopItem | undefined {
+  return id ? SHOP_ITEMS.find((item) => item.id === id) : undefined;
+}
+
+export function totalPower(player: PlayerState): number {
+  return player.power + (getItem(player.equippedWeapon)?.powerBonus ?? 0);
+}
+
+export function totalDefense(player: PlayerState): number {
+  return player.defense + (getItem(player.equippedArmor)?.defenseBonus ?? 0);
 }
 
 export function applyExperience(player: PlayerState, gainedXp: number): { player: PlayerState; levelsGained: number } {
@@ -145,27 +183,23 @@ export function calculatePlayerDamage(player: PlayerState, enemy: Enemy, skillMu
   const critical = Math.random() < player.critChance;
   const variance = 0.9 + Math.random() * 0.22;
   const brokenPenalty = player.weaponDurability <= 0 ? 0.55 : 1;
-  const raw = player.power * skillMultiplier * variance * brokenPenalty * (critical ? 1.65 : 1);
+  const raw = totalPower(player) * skillMultiplier * variance * brokenPenalty * (critical ? 1.65 : 1);
   return { damage: Math.max(1, Math.floor(raw - enemy.defense)), critical };
 }
 
 export function calculateEnemyDamage(player: PlayerState, enemy: Enemy): number {
   const bossRage = enemy.kind === 'boss' && enemy.hp <= enemy.maxHp * 0.35 ? 1.45 : 1;
   const variance = 0.88 + Math.random() * 0.24;
-  const armorPenalty = player.armorDurability <= 0 ? 0 : player.defense;
-  return Math.max(1, Math.floor(enemy.attack * bossRage * variance - armorPenalty));
+  const armorValue = player.armorDurability <= 0 ? 0 : totalDefense(player);
+  return Math.max(1, Math.floor(enemy.attack * bossRage * variance - armorValue));
 }
 
 export function repairCost(player: PlayerState): number {
-  const missingWeapon = player.maxWeaponDurability - player.weaponDurability;
-  const missingArmor = player.maxArmorDurability - player.armorDurability;
-  return Math.max(0, Math.ceil((missingWeapon + missingArmor) * 1.2));
+  return Math.max(0, Math.ceil(((player.maxWeaponDurability - player.weaponDurability) + (player.maxArmorDurability - player.armorDurability)) * 1.2));
 }
 
 export function tavernRestCost(player: PlayerState): number {
-  const missingHp = player.maxHp - player.hp;
-  const missingStamina = player.maxStamina - player.stamina;
-  return Math.max(0, Math.ceil((missingHp + missingStamina) * 0.12));
+  return Math.max(0, Math.ceil(((player.maxHp - player.hp) + (player.maxStamina - player.stamina)) * 0.12));
 }
 
 function migratePlayer(value: Partial<PlayerState> | undefined): PlayerState {
@@ -174,6 +208,9 @@ function migratePlayer(value: Partial<PlayerState> | undefined): PlayerState {
     ...(value ?? {}),
     floorWins: { ...INITIAL_PLAYER.floorWins, ...(value?.floorWins ?? {}) },
     defeatedBosses: value?.defeatedBosses ?? [],
+    inventory: value?.inventory ?? [],
+    equippedWeapon: value?.equippedWeapon ?? null,
+    equippedArmor: value?.equippedArmor ?? null,
   };
 }
 
@@ -195,7 +232,7 @@ export function loadGame(): SavedGame {
     // Ignore corrupted local saves.
   }
   const enemy = createEnemy(1, 0);
-  return { player: INITIAL_PLAYER, enemy, log: 'Первый враг заметил тебя. Победи его, чтобы начать восхождение.', battleWon: false, gameOver: false };
+  return { player: INITIAL_PLAYER, enemy, log: 'Первый враг заметил тебя. Проведи пальцем по экрану, чтобы атаковать.', battleWon: false, gameOver: false };
 }
 
 export function saveGame(game: SavedGame): void {
