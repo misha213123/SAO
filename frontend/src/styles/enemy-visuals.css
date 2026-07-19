@@ -1,0 +1,236 @@
+.swipe-city-scene {
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.swipe-city-scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 10, 18, 0.06) 0%, rgba(2, 10, 18, 0.12) 46%, rgba(2, 10, 18, 0.72) 100%),
+    radial-gradient(circle at 50% 48%, transparent 0 28%, rgba(1, 7, 13, 0.25) 74%, rgba(1, 7, 13, 0.68) 100%);
+  pointer-events: none;
+}
+
+.swipe-city-scene.floor-1 {
+  background-image: url('https://opengameart.org/sites/default/files/battleback1.png') !important;
+}
+
+.swipe-city-scene.floor-2 {
+  background-image: url('https://opengameart.org/sites/default/files/battleback2.png') !important;
+}
+
+.swipe-city-scene.floor-3 {
+  background-image: url('https://opengameart.org/sites/default/files/battleback5.png') !important;
+}
+
+.swipe-city-scene.floor-4 {
+  background-image:
+    linear-gradient(180deg, rgba(5, 37, 58, 0.08), rgba(1, 15, 25, 0.52)),
+    url('https://opengameart.org/sites/default/files/battleback1.png') !important;
+  filter: saturate(0.88) hue-rotate(118deg) brightness(0.75);
+}
+
+.swipe-city-scene.floor-5 {
+  background-image: url('https://opengameart.org/sites/default/files/battleback4.png') !important;
+  filter: saturate(0.78) hue-rotate(305deg) brightness(0.66);
+}
+
+.swipe-city-scene > .city-sky,
+.swipe-city-scene > .city-backdrop,
+.swipe-city-scene > .city-street {
+  display: none !important;
+}
+
+.rear-enemy {
+  position: absolute !important;
+  left: 50% !important;
+  top: 7% !important;
+  width: min(78vw, 520px) !important;
+  height: 62% !important;
+  transform: translateX(-50%) !important;
+  z-index: 4 !important;
+  pointer-events: none;
+  filter: drop-shadow(0 24px 24px rgba(0, 0, 0, 0.48));
+  animation: enemy-arrival 340ms cubic-bezier(.18,.86,.22,1.18) both;
+}
+
+.rear-enemy.miniboss {
+  width: min(86vw, 600px) !important;
+  height: 68% !important;
+}
+
+.rear-enemy.boss {
+  width: min(94vw, 680px) !important;
+  height: 73% !important;
+  top: 2% !important;
+}
+
+.rear-enemy .enemy-shadow {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 3%;
+  height: 9%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0,0,0,.65), rgba(0,0,0,0) 72%);
+  filter: blur(7px);
+}
+
+.rear-enemy .enemy-body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.enemy-model-3d,
+.enemy-model-3d canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.enemy-model-3d canvas {
+  touch-action: none;
+}
+
+.enemy-model-fallback {
+  position: absolute;
+  inset: 15% 12% 12%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  border-radius: 48% 52% 46% 54%;
+  background:
+    radial-gradient(circle at 42% 28%, rgba(255,255,255,.2), transparent 13%),
+    radial-gradient(circle at 50% 42%, rgba(78,216,255,.42), rgba(9,30,49,.96) 64%);
+  border: 1px solid rgba(117, 225, 255, .55);
+  box-shadow: 0 0 50px rgba(50, 195, 255, .24);
+  color: white;
+  text-align: center;
+}
+
+.enemy-model-fallback span {
+  font-size: 5rem;
+  color: #75e5ff;
+  text-shadow: 0 0 24px currentColor;
+}
+
+.enemy-model-fallback strong {
+  max-width: 80%;
+  font-size: 1rem;
+}
+
+.rear-enemy.boss .enemy-model-3d {
+  filter: drop-shadow(0 0 28px rgba(255, 62, 92, .42));
+}
+
+.rear-enemy.miniboss .enemy-model-3d {
+  filter: drop-shadow(0 0 22px rgba(174, 92, 255, .38));
+}
+
+.enemy-hit .rear-enemy {
+  animation: enemy-impact 135ms ease-out;
+}
+
+.rear-enemy.defeated {
+  animation: enemy-defeat 220ms ease-in forwards;
+}
+
+.vrm-battle-host {
+  z-index: 8 !important;
+  width: 46% !important;
+  height: 57% !important;
+  left: 27% !important;
+  bottom: -2% !important;
+  filter: drop-shadow(0 18px 12px rgba(0,0,0,.52));
+}
+
+.vrm-battle-host::after {
+  content: '';
+  position: absolute;
+  left: 52%;
+  bottom: 9%;
+  width: 8px;
+  height: 46%;
+  border-radius: 10px 10px 2px 2px;
+  transform: rotate(34deg);
+  transform-origin: 50% 100%;
+  background: linear-gradient(90deg, #eaffff 0 23%, #51d9ff 25% 62%, #0e4e7e 64% 100%);
+  box-shadow: 0 0 8px #8cecff, 0 0 22px rgba(70, 213, 255, .82);
+  opacity: .88;
+  pointer-events: none;
+}
+
+.vrm-battle-host::before {
+  content: '';
+  position: absolute;
+  left: 44%;
+  bottom: 7%;
+  width: 28%;
+  height: 7px;
+  border-radius: 5px;
+  transform: rotate(34deg);
+  background: linear-gradient(90deg, #071522, #d9f8ff 45%, #071522);
+  box-shadow: 0 3px 7px rgba(0,0,0,.7);
+  opacity: .94;
+  pointer-events: none;
+}
+
+.vrm-battle-host.slashing::after,
+.back-hero.slashing::after {
+  animation: sword-slash-visual 120ms ease-out;
+}
+
+.scene-vignette {
+  z-index: 12 !important;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.08), transparent 48%, rgba(0,0,0,.32)),
+    radial-gradient(circle at 50% 44%, transparent 42%, rgba(0,0,0,.3) 100%) !important;
+}
+
+.swipe-hint {
+  z-index: 15 !important;
+  background: rgba(3, 16, 26, .78) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 26px rgba(0,0,0,.25), inset 0 0 0 1px rgba(117,225,255,.16);
+}
+
+@keyframes enemy-arrival {
+  from { opacity: 0; transform: translateX(-50%) translateY(-28px) scale(.72); filter: blur(8px) drop-shadow(0 24px 24px rgba(0,0,0,.48)); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); filter: blur(0) drop-shadow(0 24px 24px rgba(0,0,0,.48)); }
+}
+
+@keyframes enemy-impact {
+  0% { transform: translateX(-50%) scale(1); }
+  45% { transform: translateX(calc(-50% + 9px)) scale(.96) rotate(1.3deg); filter: brightness(1.7) drop-shadow(0 0 22px #ff617d); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+@keyframes enemy-defeat {
+  to { opacity: 0; transform: translateX(-50%) translateY(-18px) scale(.3) rotate(-8deg); filter: blur(5px); }
+}
+
+@keyframes sword-slash-visual {
+  0% { transform: rotate(34deg); }
+  50% { transform: rotate(-54deg) translateY(-12px); box-shadow: 0 0 16px #fff, 0 0 42px #41ceff; }
+  100% { transform: rotate(34deg); }
+}
+
+@media (max-width: 540px) {
+  .rear-enemy { top: 3% !important; width: 90vw !important; height: 63% !important; }
+  .rear-enemy.boss { top: -2% !important; width: 102vw !important; height: 72% !important; }
+  .vrm-battle-host { width: 54% !important; height: 53% !important; left: 23% !important; bottom: -3% !important; }
+}
