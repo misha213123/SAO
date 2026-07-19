@@ -20,13 +20,13 @@ export function App() {
   const [attacking, setAttacking] = useState(false);
   const [hitFlash, setHitFlash] = useState(false);
   const [guarding, setGuarding] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
   const [swiping, setSwiping] = useState(false);
   const [trail, setTrail] = useState<TrailPoint[]>([]);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const lastSwipeHit = useRef(0);
   const swipeCombo = useRef(0);
   const trailId = useRef(0);
+  const spawnTimer = useRef<number | null>(null);
 
   const { player, enemy, battleWon, gameOver } = game;
   const currentFloor = FLOORS.find((floor) => floor.id === player.selectedFloor) ?? FLOORS[0];
@@ -41,10 +41,12 @@ export function App() {
   useEffect(() => saveGame(game), [game]);
 
   useEffect(() => {
-    if (!battleWon || transitioning) return;
-    setTransitioning(true);
-    const timer = window.setTimeout(() => {
+    if (!battleWon) return;
+
+    if (spawnTimer.current !== null) window.clearTimeout(spawnTimer.current);
+    spawnTimer.current = window.setTimeout(() => {
       setGame((value) => {
+        if (!value.battleWon) return value;
         const floorId = value.player.selectedFloor;
         const wins = value.player.floorWins[floorId] ?? 0;
         const cycle = value.player.floorCycles[floorId] ?? 0;
@@ -58,11 +60,17 @@ export function App() {
               : `${nextEnemy.name} появляется перед героем.`;
         return { ...value, enemy: nextEnemy, battleWon: false, gameOver: false, log: intro };
       });
-      setTransitioning(false);
       swipeCombo.current = 0;
-    }, 90);
-    return () => window.clearTimeout(timer);
-  }, [battleWon, transitioning]);
+      spawnTimer.current = null;
+    }, 120);
+
+    return () => {
+      if (spawnTimer.current !== null) {
+        window.clearTimeout(spawnTimer.current);
+        spawnTimer.current = null;
+      }
+    };
+  }, [battleWon]);
 
   useEffect(() => {
     if (!trail.length) return;
@@ -109,6 +117,23 @@ export function App() {
     };
   };
 
+  const enemyTurn = (wasGuarding: boolean) => {
+    setGame((value) => {
+      if (value.enemy.hp <= 0 || value.battleWon) return value;
+      const raw = calculateEnemyDamage(value.player, value.enemy);
+      const damage = wasGuarding || guarding ? Math.max(1, Math.floor(raw * 0.42)) : raw;
+      const nextHp = Math.max(0, value.player.hp - damage);
+      const armorLoss = value.enemy.kind === 'boss' ? 3 : value.enemy.kind === 'miniboss' ? 2 : 1;
+      const nextPlayer = { ...value.player, hp: nextHp, armorDurability: Math.max(0, value.player.armorDurability - armorLoss) };
+      if (nextHp === 0) {
+        const lost = Math.floor(value.player.col * 0.1);
+        return { ...value, player: { ...nextPlayer, col: Math.max(0, value.player.col - lost) }, gameOver: true, log: `${value.enemy.name} победил. Потеряно ${lost} Коллов.` };
+      }
+      return { ...value, player: nextPlayer, log: `${value.log} Ответный удар: ${damage}.` };
+    });
+    setGuarding(false);
+  };
+
   const strike = (multiplier: number, staminaCost: number, durabilityLoss: number, retaliate: boolean) => {
     if (battleWon || gameOver || attacking || player.weaponDurability <= 0) return;
     if (player.stamina < staminaCost) {
@@ -119,7 +144,9 @@ export function App() {
     setHitFlash(true);
     navigator.vibrate?.(12);
 
+    let killed = false;
     setGame((value) => {
+      if (value.battleWon || value.enemy.hp <= 0) return value;
       const result = calculatePlayerDamage(value.player, value.enemy, multiplier);
       const nextEnemyHp = Math.max(0, value.enemy.hp - result.damage);
       const nextPlayer = {
@@ -128,14 +155,15 @@ export function App() {
         weaponDurability: Math.max(0, value.player.weaponDurability - durabilityLoss),
       };
       const hitText = `${result.critical ? 'КРИТ! ' : ''}Клинок наносит ${result.damage} урона.`;
-      if (nextEnemyHp === 0) return rewardVictory(value, nextPlayer, hitText);
+      killed = nextEnemyHp === 0;
+      if (killed) return rewardVictory(value, nextPlayer, hitText);
       return { ...value, player: nextPlayer, enemy: { ...value.enemy, hp: nextEnemyHp }, log: hitText };
     });
 
     window.setTimeout(() => setHitFlash(false), 130);
     window.setTimeout(() => {
       setAttacking(false);
-      if (retaliate) enemyTurn(false);
+      if (retaliate && !killed) enemyTurn(false);
     }, 105);
   };
 
@@ -155,23 +183,6 @@ export function App() {
     setGuarding(true);
     setGame((value) => ({ ...value, player: { ...value.player, stamina: Math.min(value.player.maxStamina, value.player.stamina + 10) }, log: 'Защитная стойка: следующий удар ослаблен.' }));
     window.setTimeout(() => enemyTurn(true), 350);
-  };
-
-  const enemyTurn = (wasGuarding: boolean) => {
-    setGame((value) => {
-      if (value.enemy.hp <= 0 || value.battleWon) return value;
-      const raw = calculateEnemyDamage(value.player, value.enemy);
-      const damage = wasGuarding || guarding ? Math.max(1, Math.floor(raw * 0.42)) : raw;
-      const nextHp = Math.max(0, value.player.hp - damage);
-      const armorLoss = value.enemy.kind === 'boss' ? 3 : value.enemy.kind === 'miniboss' ? 2 : 1;
-      const nextPlayer = { ...value.player, hp: nextHp, armorDurability: Math.max(0, value.player.armorDurability - armorLoss) };
-      if (nextHp === 0) {
-        const lost = Math.floor(value.player.col * 0.1);
-        return { ...value, player: { ...nextPlayer, col: Math.max(0, value.player.col - lost) }, gameOver: true, log: `${value.enemy.name} победил. Потеряно ${lost} Коллов.` };
-      }
-      return { ...value, player: nextPlayer, log: `${value.log} Ответный удар: ${damage}.` };
-    });
-    setGuarding(false);
   };
 
   const pointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -298,7 +309,7 @@ export function App() {
               <div className="city-sky"><span className="moon" /><span className="cloud c1" /><span className="cloud c2" /></div>
               <div className="city-backdrop"><i /><i /><i /><i /><i /><i /></div>
               <div className="city-street"><i /><i /><i /></div>
-              <div className={`rear-enemy ${enemy.kind} ${battleWon ? 'defeated' : ''}`}><div className="enemy-shadow" /><div className="enemy-body"><span>{enemyIcon}</span></div></div>
+              <div key={enemy.id} className={`rear-enemy ${enemy.kind} ${battleWon ? 'defeated' : ''}`}><div className="enemy-shadow" /><div className="enemy-body"><span>{enemyIcon}</span></div></div>
               <div className={`back-hero ${attacking ? 'slashing' : ''} armor-${player.equippedArmor ?? 'starter'} weapon-${player.equippedWeapon ?? 'starter'}`}><div className="back-hair" /><div className="back-head" /><div className="back-cape" /><div className="back-torso"><i className="armor-mark" /></div><div className="back-arm left" /><div className="back-arm right" /><div className="back-leg left" /><div className="back-leg right" /><div className="equipped-sword" /></div>
               <svg className="swipe-trail" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true"><polyline points={trail.map((point) => `${point.x},${point.y}`).join(' ')} /></svg>
               {trail.slice(-5).map((point) => <i key={point.id} className="trail-spark" style={{ left: point.x, top: point.y }} />)}
