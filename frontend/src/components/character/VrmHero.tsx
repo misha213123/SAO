@@ -10,7 +10,7 @@ type VrmHeroProps = {
 };
 
 export function VrmHero({
-  modelUrl = '/models/hero.vrm.glb',
+  modelUrl = '/models/hero.vrm.vrm',
   attacking = false,
   className = '',
 }: VrmHeroProps) {
@@ -157,7 +157,7 @@ export function VrmHero({
   return (
     <div ref={mountRef} className={`vrm-hero ${className} is-${status}`} aria-label="3D аниме-персонаж">
       {status === 'loading' && <div className="vrm-hero-fallback">Загрузка 3D-героя…</div>}
-      {status === 'error' && <div className="vrm-hero-fallback vrm-error">Добавь файл hero.vrm.glb в public/models</div>}
+      {status === 'error' && <div className="vrm-hero-fallback vrm-error">Не удалось загрузить hero.vrm.vrm</div>}
     </div>
   );
 }
