@@ -6,6 +6,7 @@ import './styles/characters.css';
 import './styles/cinematic-battle.css';
 import './styles/mobile-miniapp.css';
 import './styles/progression.css';
+import './styles/adventure-upgrade.css';
 
 declare global {
   interface Window {
