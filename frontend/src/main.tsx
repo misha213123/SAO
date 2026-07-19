@@ -11,6 +11,7 @@ import './styles/adventure-upgrade.css';
 import './styles/tap-adventure.css';
 import './styles/swipe-equipment.css';
 import './styles/vrm-character.css';
+import './styles/world-backgrounds.css';
 
 declare global {
   interface Window {
