@@ -47,6 +47,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 const vrmRoots = new WeakMap<Element, Root>();
 const enemyRoots = new WeakMap<Element, Root>();
+const enemyRenderKeys = new WeakMap<Element, string>();
+let lastBattleHero: HTMLElement | null = null;
+let lastAttacking = false;
+let scheduled = false;
 
 function mountVrmHeroes(): void {
   const battleHero = document.querySelector<HTMLElement>('.battle-scene .back-hero');
@@ -55,6 +59,8 @@ function mountVrmHeroes(): void {
     const root = createRoot(battleHero);
     root.render(<VrmHero modelUrl="/models/hero.vrm.glb" className="battle-vrm" />);
     vrmRoots.set(battleHero, root);
+    lastBattleHero = battleHero;
+    lastAttacking = false;
   }
 
   const profileHero = document.querySelector<HTMLElement>('.profile-back-hero');
@@ -71,11 +77,17 @@ function syncAttackAnimation(): void {
   if (!battleHero) return;
   const root = vrmRoots.get(battleHero);
   if (!root) return;
+
+  const attacking = battleHero.classList.contains('slashing');
+  if (battleHero === lastBattleHero && attacking === lastAttacking) return;
+
+  lastBattleHero = battleHero;
+  lastAttacking = attacking;
   root.render(
     <VrmHero
       modelUrl="/models/hero.vrm.glb"
       className="battle-vrm"
-      attacking={battleHero.classList.contains('slashing')}
+      attacking={attacking}
     />,
   );
 }
@@ -96,6 +108,9 @@ function mountEnemyModels(): void {
         : enemyHost.classList.contains('elite')
           ? 'elite'
           : 'normal';
+    const defeated = enemyHost.classList.contains('defeated');
+    const hit = Boolean(enemyHost.closest('.enemy-hit'));
+    const renderKey = `${floorId}|${kind}|${enemyName}|${defeated}|${hit}`;
 
     let root = enemyRoots.get(body);
     if (!root) {
@@ -104,30 +119,38 @@ function mountEnemyModels(): void {
       enemyRoots.set(body, root);
     }
 
+    if (enemyRenderKeys.get(body) === renderKey) return;
+    enemyRenderKeys.set(body, renderKey);
+
     root.render(
       <EnemyModel3D
         enemyId={`${floorId}-${kind}-${enemyName}`}
         enemyName={enemyName}
         floorId={floorId}
         kind={kind}
-        defeated={enemyHost.classList.contains('defeated')}
-        hit={Boolean(enemyHost.closest('.enemy-hit'))}
+        defeated={defeated}
+        hit={hit}
       />,
     );
   });
 }
 
-const observer = new MutationObserver(() => {
-  mountVrmHeroes();
-  syncAttackAnimation();
-  mountEnemyModels();
-});
+function schedule3DSync(): void {
+  if (scheduled) return;
+  scheduled = true;
+  requestAnimationFrame(() => {
+    scheduled = false;
+    mountVrmHeroes();
+    syncAttackAnimation();
+    mountEnemyModels();
+  });
+}
+
+const observer = new MutationObserver(schedule3DSync);
 observer.observe(document.body, {
   childList: true,
   subtree: true,
   attributes: true,
-  characterData: true,
   attributeFilter: ['class'],
 });
-mountVrmHeroes();
-mountEnemyModels();
+schedule3DSync();
