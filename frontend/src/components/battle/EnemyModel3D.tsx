@@ -61,7 +61,17 @@ function getPreset(name: string, kind: EnemyKind, floorId: number): ModelPreset 
 
 export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = false, hit = false }: EnemyModel3DProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const hitRef = useRef(hit);
+  const defeatedRef = useRef(defeated);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    hitRef.current = hit;
+  }, [hit]);
+
+  useEffect(() => {
+    defeatedRef.current = defeated;
+  }, [defeated]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -73,32 +83,33 @@ export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = fal
     camera.position.set(0, 0.6, 4.2);
     camera.lookAt(0, 0.45, 0);
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.45));
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: false,
+      powerPreference: 'high-performance',
+    });
+    renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
-    renderer.shadowMap.enabled = true;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = false;
     mount.appendChild(renderer.domElement);
 
     scene.add(new THREE.HemisphereLight(0xbde9ff, 0x120b18, 2.7));
-    const key = new THREE.DirectionalLight(0xffffff, 4.4);
+    const key = new THREE.DirectionalLight(0xffffff, 4.1);
     key.position.set(3, 5, 4);
-    key.castShadow = true;
     scene.add(key);
-    const rim = new THREE.DirectionalLight(kind === 'boss' ? 0xff4b66 : 0x62d8ff, kind === 'boss' ? 5 : 3.2);
+    const rim = new THREE.DirectionalLight(kind === 'boss' ? 0xff4b66 : 0x62d8ff, kind === 'boss' ? 4.5 : 3);
     rim.position.set(-4, 2.5, -3);
     scene.add(rim);
 
-    const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(kind === 'boss' ? 1.18 : 0.86, 48),
-      new THREE.MeshBasicMaterial({
-        color: kind === 'boss' ? 0xff294e : kind === 'miniboss' ? 0xae5cff : 0x35cfff,
-        transparent: true,
-        opacity: kind === 'boss' ? 0.2 : 0.11,
-        side: THREE.DoubleSide,
-      }),
-    );
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: kind === 'boss' ? 0xff294e : kind === 'miniboss' ? 0xae5cff : 0x35cfff,
+      transparent: true,
+      opacity: kind === 'boss' ? 0.18 : 0.1,
+      side: THREE.DoubleSide,
+    });
+    const glow = new THREE.Mesh(new THREE.CircleGeometry(kind === 'boss' ? 1.18 : 0.86, 24), glowMaterial);
     glow.position.set(0, 0.28, -0.5);
     scene.add(glow);
 
@@ -107,6 +118,9 @@ export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = fal
     let mixer: THREE.AnimationMixer | null = null;
     let model: THREE.Object3D | null = null;
     let disposed = false;
+    let baseY = 0;
+    let baseRotationY = preset.rotationY;
+    let baseScale = 1;
 
     loader.load(
       preset.url,
@@ -125,17 +139,20 @@ export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = fal
         scaledBox.getCenter(center);
         model.position.set(-center.x, preset.y - scaledBox.min.y, -center.z);
         model.rotation.y = preset.rotationY;
+        baseY = model.position.y;
+        baseRotationY = model.rotation.y;
+        baseScale = model.scale.x;
 
         model.traverse((object) => {
-          object.frustumCulled = false;
           if (object instanceof THREE.Mesh) {
-            object.castShadow = true;
-            object.receiveShadow = true;
+            object.frustumCulled = true;
+            object.castShadow = false;
+            object.receiveShadow = false;
             const materials = Array.isArray(object.material) ? object.material : [object.material];
             materials.forEach((material) => {
               if (material instanceof THREE.MeshStandardMaterial && preset.tint) {
-                material.color.lerp(new THREE.Color(preset.tint), 0.22);
-                material.roughness = Math.min(material.roughness, 0.72);
+                material.color.lerp(new THREE.Color(preset.tint), 0.18);
+                material.roughness = Math.min(material.roughness, 0.76);
               }
             });
           }
@@ -154,8 +171,6 @@ export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = fal
       },
     );
 
-    const clock = new THREE.Clock();
-    let frame = 0;
     const resize = () => {
       const width = Math.max(1, mount.clientWidth);
       const height = Math.max(1, mount.clientHeight);
@@ -163,28 +178,35 @@ export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = fal
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     };
+    resize();
 
-    const animate = () => {
+    const clock = new THREE.Clock();
+    let frame = 0;
+    let lastRender = 0;
+
+    const animate = (timestamp: number) => {
       frame = requestAnimationFrame(animate);
-      resize();
+      if (timestamp - lastRender < 33) return;
+      lastRender = timestamp;
+
       const delta = Math.min(clock.getDelta(), 0.05);
       const t = clock.elapsedTime;
       mixer?.update(delta);
+
       if (model) {
-        model.position.y += Math.sin(t * 2.2) * 0.00055;
-        model.rotation.y += Math.sin(t * 0.8) * 0.00018;
-        const targetScale = defeated ? 0.02 : hit ? 0.92 : 1;
-        const current = model.userData.effectScale ?? 1;
-        const next = THREE.MathUtils.lerp(current, targetScale, defeated ? 0.2 : 0.28);
-        model.userData.effectScale = next;
-        const base = model.userData.baseScale ?? model.scale.x;
-        if (!model.userData.baseScale) model.userData.baseScale = base;
-        model.scale.setScalar(base * next);
+        model.position.y = baseY + Math.sin(t * 2.1) * 0.012;
+        model.rotation.y = baseRotationY + Math.sin(t * 0.75) * 0.018;
+        const targetScale = defeatedRef.current ? 0.02 : hitRef.current ? 0.94 : 1;
+        const currentScale = model.userData.effectScale ?? 1;
+        const nextScale = THREE.MathUtils.lerp(currentScale, targetScale, defeatedRef.current ? 0.32 : 0.42);
+        model.userData.effectScale = nextScale;
+        model.scale.setScalar(baseScale * nextScale);
       }
-      glow.material.opacity = (kind === 'boss' ? 0.2 : 0.1) + Math.sin(t * 2) * 0.035;
+
+      glowMaterial.opacity = (kind === 'boss' ? 0.18 : 0.09) + Math.sin(t * 1.7) * 0.02;
       renderer.render(scene, camera);
     };
-    animate();
+    frame = requestAnimationFrame(animate);
 
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
@@ -204,7 +226,7 @@ export function EnemyModel3D({ enemyId, enemyName, kind, floorId, defeated = fal
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [enemyId, enemyName, kind, floorId, defeated, hit]);
+  }, [enemyId, enemyName, kind, floorId]);
 
   return (
     <div ref={mountRef} className={`enemy-model-3d kind-${kind} ${failed ? 'is-fallback' : ''}`}>
