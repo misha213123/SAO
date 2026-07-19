@@ -5,6 +5,7 @@ from app.schemas.game import (
     CreatePlayerRequest,
     EventResolutionResponse,
     ExpeditionResponse,
+    FloorResponse,
     PlayerResponse,
     ResolveEventRequest,
     StartExpeditionRequest,
@@ -20,6 +21,11 @@ def player_response(player) -> PlayerResponse:
 
 def expedition_response(expedition) -> ExpeditionResponse:
     return ExpeditionResponse.model_validate(expedition, from_attributes=True)
+
+
+@router.get("/floors", response_model=list[FloorResponse])
+def list_floors() -> list[FloorResponse]:
+    return [FloorResponse.model_validate(floor, from_attributes=True) for floor in game_service.list_floors()]
 
 
 @router.post("/players", response_model=PlayerResponse)
